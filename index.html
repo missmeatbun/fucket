@@ -61,18 +61,17 @@
       min-height: 30px;
       word-wrap: break-word;
       outline: none;
+      cursor: text;
     }
 
-    /* 讓連結可被點擊 */
+    .message-text.editing {
+      border-color: #666;
+      background: #fffbe6;
+    }
+
     .message-text a {
       color: #0066cc;
       text-decoration: underline;
-      pointer-events: auto; /* 允許連結被點擊 */
-    }
-
-    /* 讓整個訊息區仍可編輯，但超連結不被捕捉 */
-    .message-text {
-      user-select: text;
     }
 
     .btn-delete {
@@ -84,6 +83,10 @@
       cursor: pointer;
       font-size: 12px;
       white-space: nowrap;
+    }
+
+    .btn-delete:hover {
+      opacity: 0.9;
     }
 
     .chat-input-area {
@@ -118,10 +121,12 @@
 <body>
 
   <div class="chat-wrapper">
-    <div class="chat-title">同意書契約書</div>
+    <div class="chat-title">簡易聊天室</div>
 
+    <!-- 訊息顯示區 -->
     <div id="chatMessages" class="chat-messages"></div>
 
+    <!-- 底部輸入區 -->
     <div class="chat-input-area">
       <div id="editor" class="input-box" contenteditable="true">
         在這裡輸入內容...
@@ -135,6 +140,7 @@
     const sendBtn = document.getElementById('sendBtn');
     const chatMessages = document.getElementById('chatMessages');
 
+    // 將文字中的網址轉成 <a>
     function linkify(text) {
       let escaped = text
         .replace(/&/g, '&amp;')
@@ -154,17 +160,15 @@
       });
     }
 
-    sendBtn.addEventListener('click', () => {
-      const text = editor.innerText.trim();
-      if (!text) return alert("請先輸入內容");
-
+    // 新增一則訊息
+    function addMessage(text) {
       const message = document.createElement('div');
       message.className = 'message';
 
       const messageText = document.createElement('div');
       messageText.className = 'message-text';
-      messageText.contentEditable = 'true';
-      messageText.innerHTML = linkify(text);
+      messageText.contentEditable = 'false';        // 預設不可編輯
+      messageText.innerHTML = linkify(text);        // 顯示已 linkify 的內容
 
       const deleteBtn = document.createElement('button');
       deleteBtn.className = 'btn-delete';
@@ -173,32 +177,54 @@
       message.appendChild(messageText);
       message.appendChild(deleteBtn);
 
+      // 雙擊啟用編輯模式
+      messageText.addEventListener('dblclick', () => {
+        // 進入編輯模式：把目前畫面上的文字轉回純文字
+        const rawText = messageText.innerText;
+        messageText.contentEditable = 'true';
+        messageText.classList.add('editing');
+        messageText.innerText = rawText;
+        messageText.focus();
+      });
+
+      // 失焦時離開編輯模式 + 重新 linkify
+      messageText.addEventListener('blur', () => {
+        if (messageText.isContentEditable) {
+          const newText = messageText.innerText.trim();
+          messageText.contentEditable = 'false';
+          messageText.classList.remove('editing');
+          messageText.innerHTML = linkify(newText);
+        }
+      });
+
       chatMessages.appendChild(message);
       chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
 
+    // 發送按鈕
+    sendBtn.addEventListener('click', () => {
+      const text = editor.innerText.trim();
+      if (!text) {
+        alert('請先輸入內容');
+        return;
+      }
+      addMessage(text);
       editor.innerText = '';
     });
 
+    // 刪除訊息（事件代理）
     chatMessages.addEventListener('click', (e) => {
       if (e.target.classList.contains('btn-delete')) {
         e.target.parentElement.remove();
       }
     });
 
+    // 點一下輸入框時，如果還是預設文字就清掉
     editor.addEventListener('focus', () => {
       if (editor.innerText.trim() === '在這裡輸入內容...') {
         editor.innerText = '';
       }
     });
-
-    /* 🔥 讓contenteditable中的連結可正常開啟 */
-    chatMessages.addEventListener("click", (event) => {
-      if (event.target.tagName === "A") {
-        event.preventDefault();               // 防止編輯模式干擾
-        window.open(event.target.href, "_blank"); // 正常開啟連結
-      }
-    });
-
   </script>
 
 </body>
