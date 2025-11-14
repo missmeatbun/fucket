@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>簡易聊天室</title>
+  <title>登入後聊天室範例（多使用者）</title>
   <style>
     body {
       margin: 0;
@@ -15,6 +15,68 @@
       align-items: center;
     }
 
+    .auth-wrapper {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .login-panel {
+      width: 90%;
+      max-width: 360px;
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .login-title {
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+
+    .login-field {
+      margin-bottom: 12px;
+    }
+
+    .login-field label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    .login-field input {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      background: #4caf50;
+      color: #fff;
+      margin-top: 5px;
+    }
+
+    .login-hint {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #777;
+      text-align: center;
+    }
+
     .chat-wrapper {
       width: 90%;
       max-width: 600px;
@@ -22,7 +84,7 @@
       background: #ffffff;
       border-radius: 10px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      display: flex;
+      display: none;
       flex-direction: column;
       box-sizing: border-box;
       padding: 10px;
@@ -32,6 +94,13 @@
       text-align: center;
       font-size: 20px;
       font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .chat-user {
+      text-align: center;
+      font-size: 12px;
+      color: #555;
       margin-bottom: 10px;
     }
 
@@ -72,6 +141,12 @@
     .message-text a {
       color: #0066cc;
       text-decoration: underline;
+    }
+
+    .message-meta {
+      font-size: 11px;
+      color: #777;
+      margin-bottom: 2px;
     }
 
     .btn-delete {
@@ -120,27 +195,70 @@
 </head>
 <body>
 
-  <div class="chat-wrapper">
-    <div class="chat-title">同意書契約書</div>
-
-    <!-- 訊息顯示區 -->
-    <div id="chatMessages" class="chat-messages"></div>
-
-    <!-- 底部輸入區 -->
-    <div class="chat-input-area">
-      <div id="editor" class="input-box" contenteditable="true">
-        在這裡輸入內容...
+  <div class="auth-wrapper">
+    <!-- 登入區 -->
+    <div id="loginPanel" class="login-panel">
+      <div class="login-title">請先登入</div>
+      <div class="login-field">
+        <label for="username">帳號</label>
+        <input type="text" id="username" placeholder="輸入帳號" />
       </div>
-      <button id="sendBtn" class="btn-send">發送</button>
+      <div class="login-field">
+        <label for="password">密碼</label>
+        <input type="password" id="password" placeholder="輸入密碼" />
+      </div>
+      <button id="loginBtn" class="btn-login">登入</button>
+      <div class="login-hint">
+        使用者：<br>
+        pf1087 / 美美<br>
+        pf1048 / 艷君<br>
+        pf1259 / 玉亭<br>
+        如有帳號問題請洽管理者
+        
+      </div>
+    </div>
+
+    <!-- 聊天室區 -->
+    <div id="chatWrapper" class="chat-wrapper">
+      <div class="chat-title">同意書契約書</div>
+      <div id="currentUserInfo" class="chat-user"></div>
+
+      <div id="chatMessages" class="chat-messages"></div>
+
+      <div class="chat-input-area">
+        <div id="editor" class="input-box" contenteditable="true">
+          在這裡輸入內容...
+        </div>
+        <button id="sendBtn" class="btn-send">發送</button>
+      </div>
     </div>
   </div>
 
   <script>
+    // ✅ 這裡管理所有可登入的使用者
+    const validUsers = [
+      { username: 'pf1087',  password: '273324'  },
+      { username: 'pf1048', password: '821615'  },
+      { username: 'pf1259',  password: 'tsai1210' }
+      // 👉 想新增使用者，就在這裡多加一行，例如：
+      // { username: 'mary', password: 'abcd' }
+    ];
+
+    // 登入相關 DOM
+    const loginPanel = document.getElementById('loginPanel');
+    const loginBtn = document.getElementById('loginBtn');
+    const chatWrapper = document.getElementById('chatWrapper');
+    const currentUserInfo = document.getElementById('currentUserInfo');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+
+    // 聊天相關 DOM
     const editor = document.getElementById('editor');
     const sendBtn = document.getElementById('sendBtn');
     const chatMessages = document.getElementById('chatMessages');
 
-    // 將文字中的網址轉成 <a>
+    let currentUser = null; // 目前登入的使用者名稱
+
     function linkify(text) {
       let escaped = text
         .replace(/&/g, '&amp;')
@@ -160,26 +278,39 @@
       });
     }
 
-    // 新增一則訊息
     function addMessage(text) {
+      if (!currentUser) {
+        alert('請先登入後再發送訊息');
+        return;
+      }
+
       const message = document.createElement('div');
       message.className = 'message';
 
+      // 顯示誰發的
+      const meta = document.createElement('div');
+      meta.className = 'message-meta';
+      meta.textContent = `由 ${currentUser} 發送`;
+
       const messageText = document.createElement('div');
       messageText.className = 'message-text';
-      messageText.contentEditable = 'false';        // 預設不可編輯
-      messageText.innerHTML = linkify(text);        // 顯示已 linkify 的內容
+      messageText.contentEditable = 'false';
+      messageText.innerHTML = linkify(text);
+
+      const textWrapper = document.createElement('div');
+      textWrapper.style.flex = '1';
+      textWrapper.appendChild(meta);
+      textWrapper.appendChild(messageText);
 
       const deleteBtn = document.createElement('button');
       deleteBtn.className = 'btn-delete';
       deleteBtn.innerText = '刪除';
 
-      message.appendChild(messageText);
+      message.appendChild(textWrapper);
       message.appendChild(deleteBtn);
 
       // 雙擊啟用編輯模式
       messageText.addEventListener('dblclick', () => {
-        // 進入編輯模式：把目前畫面上的文字轉回純文字
         const rawText = messageText.innerText;
         messageText.contentEditable = 'true';
         messageText.classList.add('editing');
@@ -201,28 +332,52 @@
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    // 發送按鈕
+    // 發送訊息
     sendBtn.addEventListener('click', () => {
       const text = editor.innerText.trim();
       if (!text) {
         alert('請先輸入內容');
         return;
       }
+      if (!currentUser) {
+        alert('請先登入後再發送訊息');
+        return;
+      }
       addMessage(text);
       editor.innerText = '';
     });
 
-    // 刪除訊息（事件代理）
+    // 刪除訊息
     chatMessages.addEventListener('click', (e) => {
       if (e.target.classList.contains('btn-delete')) {
         e.target.parentElement.remove();
       }
     });
 
-    // 點一下輸入框時，如果還是預設文字就清掉
+    // 輸入框預設文字清除
     editor.addEventListener('focus', () => {
       if (editor.innerText.trim() === '在這裡輸入內容...') {
         editor.innerText = '';
+      }
+    });
+
+    // 登入按鈕
+    loginBtn.addEventListener('click', () => {
+      const u = usernameInput.value.trim();
+      const p = passwordInput.value;
+
+      // 在 validUsers 陣列中找有沒有這組帳密
+      const found = validUsers.find(user =>
+        user.username === u && user.password === p
+      );
+
+      if (found) {
+        currentUser = found.username;
+        loginPanel.style.display = 'none';
+        chatWrapper.style.display = 'flex';
+        currentUserInfo.textContent = '已登入帳號：' + currentUser;
+      } else {
+        alert('帳號或密碼錯誤，請再試一次');
       }
     });
   </script>
