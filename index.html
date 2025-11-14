@@ -152,7 +152,7 @@
     .message-text a {
       color: #0066cc;
       text-decoration: underline;
-      word-break: break-all;   /* 🔥 連結本身也要可以斷行 */
+      word-break: break-all;
       overflow-wrap: anywhere;
     }
 
@@ -216,7 +216,7 @@
       </div>
       <button id="loginBtn" class="btn-login">登入</button>
       <div class="login-hint">
-        （如有帳號問題請洽管理人員）
+        （如有帳號問題請找美美）
       </div>
     </div>
 
@@ -236,9 +236,9 @@
     </div>
   </div>
 
-  <!-- Firebase + Firestore：使用 esm.run CDN -->
+  <!-- Firebase + Firestore：gstatic CDN -->
   <script type="module">
-    import { initializeApp } from "https://esm.run/@firebase/app";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import {
       getFirestore,
       collection,
@@ -250,7 +250,7 @@
       doc,
       updateDoc,
       deleteDoc
-    } from "https://esm.run/@firebase/firestore";
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     // Firebase 設定
     const firebaseConfig = {
@@ -288,7 +288,7 @@
     let currentUser = null;
     const LOCAL_KEY = 'chatCurrentUser'; // 保持登入狀態用
 
-    // 文字自動轉網址連結（加上純網域樣式）
+    // 文字自動轉網址連結（含 dottedsign.com/task/?code= 這類）
     function linkify(text) {
       let escaped = text
         .replace(/&/g, '&amp;')
@@ -305,8 +305,6 @@
 
       return escaped.replace(urlPattern, (match) => {
         let url = match;
-
-        // 沒有 http/https 開頭的，加上 http://
         if (!/^https?:\/\//i.test(url)) {
           url = 'http://' + url;
         }
@@ -322,7 +320,7 @@
       currentUserInfo.textContent = '已登入帳號：' + currentUser;
     }
 
-    // 進頁面先檢查 localStorage，有就自動登入
+    // 一進頁面先檢查 localStorage，有就自動登入
     const savedUser = localStorage.getItem(LOCAL_KEY);
     if (savedUser) {
       applyLoggedIn(savedUser);
@@ -416,7 +414,7 @@
         deleteBtn.className = 'btn-delete';
         deleteBtn.innerText = '刪除';
 
-        // 🔥 先放刪除鍵，再放文字區 → 刪除鍵在最前面
+        // 🔥 刪除鍵放最前面
         message.appendChild(deleteBtn);
         message.appendChild(textWrapper);
 
