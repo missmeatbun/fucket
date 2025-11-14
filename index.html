@@ -165,6 +165,7 @@
       cursor: pointer;
       font-size: 12px;
       white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .btn-delete:hover {
@@ -175,12 +176,14 @@
       margin-top: 10px;
       display: flex;
       gap: 8px;
-      align-items: center;
+      align-items: stretch;
     }
 
     .input-box {
       flex: 1;
+      min-width: 0;                  /* 🔥 讓 flex 裡的欄位可以被壓縮，不擠出按鈕 */
       min-height: 60px;
+      max-height: 140px;             /* 🔥 限制最大高度，超過就出捲軸 */
       border: 2px solid #333;
       background: #fff;
       padding: 8px;
@@ -188,6 +191,10 @@
       box-sizing: border-box;
       font-size: 16px;
       outline: none;
+      word-wrap: break-word;
+      overflow-wrap: anywhere;
+      word-break: break-all;         /* 🔥 輸入框裡的長網址也強制換行 */
+      overflow-y: auto;
     }
 
     .btn-send {
@@ -197,6 +204,7 @@
       border: none;
       cursor: pointer;
       white-space: nowrap;
+      flex-shrink: 0;                /* 🔥 按鈕不被壓縮、不會被擠到下一行 */
     }
   </style>
 </head>
@@ -222,7 +230,7 @@
 
     <!-- 聊天室畫面 -->
     <div id="chatWrapper" class="chat-wrapper">
-      <div class="chat-title">同意書契約書（Firestore 即時同步）</div>
+      <div class="chat-title">同意書合約書（Firestore 即時同步）</div>
       <div id="currentUserInfo" class="chat-user"></div>
 
       <div id="chatMessages" class="chat-messages"></div>
@@ -414,54 +422,10 @@
         deleteBtn.className = 'btn-delete';
         deleteBtn.innerText = '刪除';
 
-        // 🔥 刪除鍵放最前面
+        // 刪除鍵放最前面
         message.appendChild(deleteBtn);
         message.appendChild(textWrapper);
 
         // 雙擊啟用編輯模式
         messageText.addEventListener('dblclick', () => {
-          const rawText = messageText.innerText;
-          messageText.contentEditable = 'true';
-          messageText.classList.add('editing');
-          messageText.innerText = rawText;
-          messageText.focus();
-        });
-
-        // 失焦時儲存修改
-        messageText.addEventListener('blur', async () => {
-          if (messageText.isContentEditable) {
-            const newText = messageText.innerText.trim();
-            messageText.contentEditable = 'false';
-            messageText.classList.remove('editing');
-            try {
-              await updateDoc(doc(db, "messages", id), {
-                text: newText
-              });
-            } catch (e) {
-              console.error('更新訊息失敗：', e);
-              alert('更新訊息失敗：' + e.message);
-            }
-          }
-        });
-
-        // 刪除訊息
-        deleteBtn.addEventListener('click', async () => {
-          try {
-            await deleteDoc(doc(db, "messages", id));
-          } catch (e) {
-            console.error('刪除訊息失敗：', e);
-            alert('刪除訊息失敗：' + e.message);
-          }
-        });
-
-        chatMessages.appendChild(message);
-      });
-
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }, (error) => {
-      console.error('onSnapshot 讀取錯誤：', error);
-      alert('Firestore 讀取錯誤：' + error.message);
-    });
-  </script>
-</body>
-</html>
+          const rawText = messageT
