@@ -63,8 +63,16 @@
       outline: none;
     }
 
-    .message-text[contenteditable="true"]:focus {
-      border-color: #666;
+    /* 讓連結可被點擊 */
+    .message-text a {
+      color: #0066cc;
+      text-decoration: underline;
+      pointer-events: auto; /* 允許連結被點擊 */
+    }
+
+    /* 讓整個訊息區仍可編輯，但超連結不被捕捉 */
+    .message-text {
+      user-select: text;
     }
 
     .btn-delete {
@@ -76,10 +84,6 @@
       cursor: pointer;
       font-size: 12px;
       white-space: nowrap;
-    }
-
-    .btn-delete:hover {
-      opacity: 0.9;
     }
 
     .chat-input-area {
@@ -114,12 +118,10 @@
 <body>
 
   <div class="chat-wrapper">
-    <div class="chat-title">同意書連結</div>
+    <div class="chat-title">同意書契約書</div>
 
-    <!-- 訊息顯示區 -->
     <div id="chatMessages" class="chat-messages"></div>
 
-    <!-- 底部輸入區 -->
     <div class="chat-input-area">
       <div id="editor" class="input-box" contenteditable="true">
         在這裡輸入內容...
@@ -133,9 +135,7 @@
     const sendBtn = document.getElementById('sendBtn');
     const chatMessages = document.getElementById('chatMessages');
 
-    // 將文字中的網址自動轉成 <a> 連結
     function linkify(text) {
-      // 先把特殊字元做 HTML escape，避免被當成原始 HTML
       let escaped = text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -147,24 +147,16 @@
 
       return escaped.replace(urlPattern, (match) => {
         let url = match;
-
-        // 如果是 www 開頭，補上 http://
         if (!/^https?:\/\//i.test(url)) {
           url = 'http://' + url;
         }
-
-        return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + match + '</a>';
+        return `<a href="${url}" target="_blank" rel="noopener noreferrer">${match}</a>`;
       });
     }
 
-    // 發送訊息
     sendBtn.addEventListener('click', () => {
       const text = editor.innerText.trim();
-
-      if (!text) {
-        alert('請先輸入內容');
-        return;
-      }
+      if (!text) return alert("請先輸入內容");
 
       const message = document.createElement('div');
       message.className = 'message';
@@ -172,8 +164,6 @@
       const messageText = document.createElement('div');
       messageText.className = 'message-text';
       messageText.contentEditable = 'true';
-
-      // 使用 linkify，把文字中的網址變成 <a>
       messageText.innerHTML = linkify(text);
 
       const deleteBtn = document.createElement('button');
@@ -184,26 +174,31 @@
       message.appendChild(deleteBtn);
 
       chatMessages.appendChild(message);
-
       chatMessages.scrollTop = chatMessages.scrollHeight;
 
       editor.innerText = '';
     });
 
-    // 刪除訊息
     chatMessages.addEventListener('click', (e) => {
       if (e.target.classList.contains('btn-delete')) {
-        const message = e.target.parentElement;
-        chatMessages.removeChild(message);
+        e.target.parentElement.remove();
       }
     });
 
-    // 點一下輸入框時，如果還是預設文字就清掉
     editor.addEventListener('focus', () => {
       if (editor.innerText.trim() === '在這裡輸入內容...') {
         editor.innerText = '';
       }
     });
+
+    /* 🔥 讓contenteditable中的連結可正常開啟 */
+    chatMessages.addEventListener("click", (event) => {
+      if (event.target.tagName === "A") {
+        event.preventDefault();               // 防止編輯模式干擾
+        window.open(event.target.href, "_blank"); // 正常開啟連結
+      }
+    });
+
   </script>
 
 </body>
