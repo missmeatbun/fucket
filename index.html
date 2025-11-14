@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>登入後聊天室範例（多使用者）</title>
+  <title>登入後聊天室（Firestore 即時同步）</title>
   <style>
     body {
       margin: 0;
@@ -213,14 +213,13 @@
         pf1087 / 美美<br>
         pf1048 / 艷君<br>
         pf1259 / 玉亭<br>
-        如有帳號問題請洽管理者
-        
+        （如有帳號問題請洽管理者）
       </div>
     </div>
 
     <!-- 聊天室區 -->
     <div id="chatWrapper" class="chat-wrapper">
-      <div class="chat-title">同意書契約書</div>
+      <div class="chat-title">同意書契約書（Firestore）</div>
       <div id="currentUserInfo" class="chat-user"></div>
 
       <div id="chatMessages" class="chat-messages"></div>
@@ -234,17 +233,39 @@
     </div>
   </div>
 
-  <script>
-    // ✅ 這裡管理所有可登入的使用者
-    const validUsers = [
-      { username: 'pf1087',  password: '273324'  },
-      { username: 'pf1048', password: '821615'  },
-      { username: 'pf1259',  password: 'tsai1210' }
-      // 👉 想新增使用者，就在這裡多加一行，例如：
-      // { username: 'mary', password: 'abcd' }
-    ];
+  <!-- 🔥 Firebase + Firestore（使用 ES Module CDN） -->
+  <script type="module">
+    // 這裡改成你自己的 Firebase 設定
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
 
-    // 登入相關 DOM
+    // 匯入 Firebase 模組
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      serverTimestamp,
+      query,
+      orderBy,
+      onSnapshot,
+      doc,
+      updateDoc,
+      deleteDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // 初始化 Firebase & Firestore
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const messagesCol = collection(db, "messages"); // Firestore 裡會建立一個 "messages" 集合
+
+    // ---- DOM 變數 ----
     const loginPanel = document.getElementById('loginPanel');
     const loginBtn = document.getElementById('loginBtn');
     const chatWrapper = document.getElementById('chatWrapper');
@@ -252,13 +273,20 @@
     const usernameInput = document.getElementById('username');
     const passwordInput = document.getElementById('password');
 
-    // 聊天相關 DOM
     const editor = document.getElementById('editor');
     const sendBtn = document.getElementById('sendBtn');
     const chatMessages = document.getElementById('chatMessages');
 
-    let currentUser = null; // 目前登入的使用者名稱
+    // 可登入的帳號清單（示範用）
+    const validUsers = [
+      { username: 'pf1087',  password: '273324'  },
+      { username: 'pf1048', password: '821615'  },
+      { username: 'pf1259',  password: 'pf1259' }
+    ];
 
+    let currentUser = null; // 目前登入使用者
+
+    // 文字轉連結
     function linkify(text) {
       let escaped = text
         .replace(/&/g, '&amp;')
@@ -278,98 +306,12 @@
       });
     }
 
-    function addMessage(text) {
-      if (!currentUser) {
-        alert('請先登入後再發送訊息');
-        return;
-      }
-
-      const message = document.createElement('div');
-      message.className = 'message';
-
-      // 顯示誰發的
-      const meta = document.createElement('div');
-      meta.className = 'message-meta';
-      meta.textContent = `由 ${currentUser} 發送`;
-
-      const messageText = document.createElement('div');
-      messageText.className = 'message-text';
-      messageText.contentEditable = 'false';
-      messageText.innerHTML = linkify(text);
-
-      const textWrapper = document.createElement('div');
-      textWrapper.style.flex = '1';
-      textWrapper.appendChild(meta);
-      textWrapper.appendChild(messageText);
-
-      const deleteBtn = document.createElement('button');
-      deleteBtn.className = 'btn-delete';
-      deleteBtn.innerText = '刪除';
-
-      message.appendChild(textWrapper);
-      message.appendChild(deleteBtn);
-
-      // 雙擊啟用編輯模式
-      messageText.addEventListener('dblclick', () => {
-        const rawText = messageText.innerText;
-        messageText.contentEditable = 'true';
-        messageText.classList.add('editing');
-        messageText.innerText = rawText;
-        messageText.focus();
-      });
-
-      // 失焦時離開編輯模式 + 重新 linkify
-      messageText.addEventListener('blur', () => {
-        if (messageText.isContentEditable) {
-          const newText = messageText.innerText.trim();
-          messageText.contentEditable = 'false';
-          messageText.classList.remove('editing');
-          messageText.innerHTML = linkify(newText);
-        }
-      });
-
-      chatMessages.appendChild(message);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    // 發送訊息
-    sendBtn.addEventListener('click', () => {
-      const text = editor.innerText.trim();
-      if (!text) {
-        alert('請先輸入內容');
-        return;
-      }
-      if (!currentUser) {
-        alert('請先登入後再發送訊息');
-        return;
-      }
-      addMessage(text);
-      editor.innerText = '';
-    });
-
-    // 刪除訊息
-    chatMessages.addEventListener('click', (e) => {
-      if (e.target.classList.contains('btn-delete')) {
-        e.target.parentElement.remove();
-      }
-    });
-
-    // 輸入框預設文字清除
-    editor.addEventListener('focus', () => {
-      if (editor.innerText.trim() === '在這裡輸入內容...') {
-        editor.innerText = '';
-      }
-    });
-
     // 登入按鈕
     loginBtn.addEventListener('click', () => {
       const u = usernameInput.value.trim();
       const p = passwordInput.value;
 
-      // 在 validUsers 陣列中找有沒有這組帳密
-      const found = validUsers.find(user =>
-        user.username === u && user.password === p
-      );
+      const found = validUsers.find(user => user.username === u && user.password === p);
 
       if (found) {
         currentUser = found.username;
@@ -380,7 +322,124 @@
         alert('帳號或密碼錯誤，請再試一次');
       }
     });
-  </script>
 
+    // 發送訊息（寫入 Firestore）
+    sendBtn.addEventListener('click', async () => {
+      const text = editor.innerText.trim();
+      if (!text) {
+        alert('請先輸入內容');
+        return;
+      }
+      if (!currentUser) {
+        alert('請先登入後再發送訊息');
+        return;
+      }
+
+      try {
+        await addDoc(messagesCol, {
+          text,
+          user: currentUser,
+          createdAt: serverTimestamp()
+        });
+        editor.innerText = '';
+      } catch (e) {
+        console.error('新增訊息失敗：', e);
+        alert('新增訊息失敗，請稍後再試');
+      }
+    });
+
+    // 清掉預設文字
+    editor.addEventListener('focus', () => {
+      if (editor.innerText.trim() === '在這裡輸入內容...') {
+        editor.innerText = '';
+      }
+    });
+
+    // 🔄 即時監聽 Firestore，任何人增刪改都馬上同步
+    const q = query(messagesCol, orderBy('createdAt', 'asc'));
+
+    onSnapshot(q, (snapshot) => {
+      chatMessages.innerHTML = ''; // 先清空再重畫（簡單粗暴、但好理解）
+
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        const id = docSnap.id;
+        const text = data.text || '';
+        const user = data.user || '未知';
+        let timeString = '';
+        if (data.createdAt && data.createdAt.toDate) {
+          const d = data.createdAt.toDate();
+          timeString = d.toLocaleString();
+        }
+
+        // 建立 DOM
+        const message = document.createElement('div');
+        message.className = 'message';
+
+        const meta = document.createElement('div');
+        meta.className = 'message-meta';
+        meta.textContent = `由 ${user} 發送 ${timeString ? `（${timeString}）` : ''}`;
+
+        const messageText = document.createElement('div');
+        messageText.className = 'message-text';
+        messageText.contentEditable = 'false';
+        messageText.innerHTML = linkify(text);
+
+        const textWrapper = document.createElement('div');
+        textWrapper.style.flex = '1';
+        textWrapper.appendChild(meta);
+        textWrapper.appendChild(messageText);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn-delete';
+        deleteBtn.innerText = '刪除';
+
+        // 雙擊編輯
+        messageText.addEventListener('dblclick', () => {
+          const rawText = messageText.innerText;
+          messageText.contentEditable = 'true';
+          messageText.classList.add('editing');
+          messageText.innerText = rawText;
+          messageText.focus();
+        });
+
+        // 失焦時儲存修改（更新 Firestore）
+        messageText.addEventListener('blur', async () => {
+          if (messageText.isContentEditable) {
+            const newText = messageText.innerText.trim();
+            messageText.contentEditable = 'false';
+            messageText.classList.remove('editing');
+
+            try {
+              await updateDoc(doc(db, "messages", id), {
+                text: newText
+              });
+              // Firestore 更新完會自動觸發 onSnapshot，再重新 linkify
+            } catch (e) {
+              console.error('更新訊息失敗：', e);
+              alert('更新訊息失敗，請稍後再試');
+            }
+          }
+        });
+
+        // 刪除訊息（刪 Firestore）
+        deleteBtn.addEventListener('click', async () => {
+          try {
+            await deleteDoc(doc(db, "messages", id));
+          } catch (e) {
+            console.error('刪除訊息失敗：', e);
+            alert('刪除訊息失敗，請稍後再試');
+          }
+        });
+
+        message.appendChild(textWrapper);
+        message.appendChild(deleteBtn);
+
+        chatMessages.appendChild(message);
+      });
+
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+  </script>
 </body>
 </html>
