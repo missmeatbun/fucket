@@ -1,39 +1,210 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>簡單文字編輯欄位</title>
-<style>
-body {
-display: flex;
-justify-content: center;
-align-items: center;
-height: 100vh;
-margin: 0;
-background: #f2f2f2;
-font-family: Arial, sans-serif;
-}
-.box {
-width: 60%;
-min-height: 200px;
-border: 2px solid #333;
-background: #fff;
-padding: 15px;
-box-sizing: border-box;
-border-radius: 6px;
-font-size: 18px;
-outline: none;
-}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>簡易聊天室</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .chat-wrapper {
+      width: 90%;
+      max-width: 600px;
+      height: 80vh;
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+      padding: 10px;
+    }
+
+    .chat-title {
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .chat-messages {
+      flex: 1;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 10px;
+      box-sizing: border-box;
+      overflow-y: auto;
+      background: #fafafa;
+    }
+
+    .message {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 8px;
+      gap: 6px;
+    }
+
+    .message-text {
+      flex: 1;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+      background: #fff;
+      min-height: 30px;
+      word-wrap: break-word;
+      outline: none;
+    }
+
+    .message-text[contenteditable="true"]:focus {
+      border-color: #666;
+    }
+
+    .btn-delete {
+      border: none;
+      background: #ff6b6b;
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .btn-delete:hover {
+      opacity: 0.9;
+    }
+
+    .chat-input-area {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .input-box {
+      flex: 1;
+      min-height: 60px;
+      border: 2px solid #333;
+      background: #fff;
+      padding: 8px;
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-size: 16px;
+      outline: none;
+    }
+
+    .btn-send {
+      padding: 8px 16px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+  </style>
 </head>
 <body>
 
+  <div class="chat-wrapper">
+    <div class="chat-title">同意書連結</div>
 
-<div class="box" contenteditable="true">
-在這裡輸入內容...
-</div>
+    <!-- 訊息顯示區 -->
+    <div id="chatMessages" class="chat-messages"></div>
 
+    <!-- 底部輸入區 -->
+    <div class="chat-input-area">
+      <div id="editor" class="input-box" contenteditable="true">
+        在這裡輸入內容...
+      </div>
+      <button id="sendBtn" class="btn-send">發送</button>
+    </div>
+  </div>
+
+  <script>
+    const editor = document.getElementById('editor');
+    const sendBtn = document.getElementById('sendBtn');
+    const chatMessages = document.getElementById('chatMessages');
+
+    // 將文字中的網址自動轉成 <a> 連結
+    function linkify(text) {
+      // 先把特殊字元做 HTML escape，避免被當成原始 HTML
+      let escaped = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+      const urlPattern = /((https?:\/\/[^\s]+)|(www\.[^\s]+))/g;
+
+      return escaped.replace(urlPattern, (match) => {
+        let url = match;
+
+        // 如果是 www 開頭，補上 http://
+        if (!/^https?:\/\//i.test(url)) {
+          url = 'http://' + url;
+        }
+
+        return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + match + '</a>';
+      });
+    }
+
+    // 發送訊息
+    sendBtn.addEventListener('click', () => {
+      const text = editor.innerText.trim();
+
+      if (!text) {
+        alert('請先輸入內容');
+        return;
+      }
+
+      const message = document.createElement('div');
+      message.className = 'message';
+
+      const messageText = document.createElement('div');
+      messageText.className = 'message-text';
+      messageText.contentEditable = 'true';
+
+      // 使用 linkify，把文字中的網址變成 <a>
+      messageText.innerHTML = linkify(text);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'btn-delete';
+      deleteBtn.innerText = '刪除';
+
+      message.appendChild(messageText);
+      message.appendChild(deleteBtn);
+
+      chatMessages.appendChild(message);
+
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+
+      editor.innerText = '';
+    });
+
+    // 刪除訊息
+    chatMessages.addEventListener('click', (e) => {
+      if (e.target.classList.contains('btn-delete')) {
+        const message = e.target.parentElement;
+        chatMessages.removeChild(message);
+      }
+    });
+
+    // 點一下輸入框時，如果還是預設文字就清掉
+    editor.addEventListener('focus', () => {
+      if (editor.innerText.trim() === '在這裡輸入內容...') {
+        editor.innerText = '';
+      }
+    });
+  </script>
 
 </body>
 </html>
