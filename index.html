@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>登入後聊天室（Firestore 即時同步）</title>
+  <title>同意書契約書（Firestore 即時同步）</title>
   <style>
     body {
       margin: 0;
@@ -17,76 +17,93 @@
 
     .auth-wrapper {
       width: 100%;
+      max-width: 650px;
       display: flex;
-      justify-content: center;
-      align-items: center;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: stretch;
+      padding: 10px;
+      box-sizing: border-box;
+      gap: 10px;
     }
 
-    /* 登入卡片 */
+    /* 登入卡片（縮小成上方一塊） */
     .login-panel {
-      width: 90%;
-      max-width: 360px;
+      width: 100%;
       background: #ffffff;
       border-radius: 10px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      padding: 20px;
+      padding: 16px;
       box-sizing: border-box;
     }
 
     .login-title {
-      text-align: center;
-      font-size: 22px;
+      font-size: 18px;
       font-weight: bold;
-      margin-bottom: 15px;
+      margin-bottom: 10px;
+    }
+
+    .login-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
     }
 
     .login-field {
-      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 120px;
     }
 
     .login-field label {
-      display: block;
-      margin-bottom: 4px;
-      font-size: 14px;
+      font-size: 12px;
+      margin-bottom: 2px;
     }
 
     .login-field input {
       width: 100%;
-      padding: 8px;
+      padding: 6px;
       border-radius: 6px;
       border: 1px solid #ccc;
       box-sizing: border-box;
       font-size: 14px;
     }
 
-    .btn-login {
-      width: 100%;
-      padding: 10px;
-      font-size: 16px;
+    .btn-login, .btn-logout {
+      padding: 8px 10px;
+      font-size: 14px;
       border-radius: 6px;
       border: none;
       cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn-login {
       background: #4caf50;
       color: #fff;
-      margin-top: 5px;
+    }
+
+    .btn-logout {
+      background: #888;
+      color: #fff;
     }
 
     .login-hint {
-      margin-top: 10px;
-      font-size: 12px;
+      margin-top: 6px;
+      font-size: 11px;
       color: #777;
-      text-align: center;
     }
 
-    /* 聊天室外框 */
+    /* 聊天室外框（永遠顯示，未登入時為唯讀） */
     .chat-wrapper {
-      width: 90%;
-      max-width: 600px;
-      height: 80vh;
+      width: 100%;
+      height: 70vh;
       background: #ffffff;
       border-radius: 10px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      display: none; /* 登入後才顯示 */
+      display: flex;
       flex-direction: column;
       box-sizing: border-box;
       padding: 10px;
@@ -100,26 +117,14 @@
     }
 
     .chat-title {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: bold;
     }
 
-    .btn-logout {
-      padding: 4px 10px;
-      font-size: 12px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      background: #888;
-      color: #fff;
-      white-space: nowrap;
-    }
-
     .chat-user {
-      text-align: center;
       font-size: 12px;
       color: #555;
-      margin-bottom: 10px;
+      text-align: right;
     }
 
     .chat-messages {
@@ -130,6 +135,7 @@
       box-sizing: border-box;
       overflow-y: auto;
       background: #fafafa;
+      margin-top: 6px;
     }
 
     .message {
@@ -222,35 +228,45 @@
       white-space: nowrap;
       flex-shrink: 0;
     }
+
+    .readonly-hint {
+      margin-top: 4px;
+      font-size: 11px;
+      color: #888;
+      text-align: right;
+    }
   </style>
 </head>
 <body>
 
   <div class="auth-wrapper">
-    <!-- 登入畫面 -->
+    <!-- 上方登入列（沒登入也會顯示） -->
     <div id="loginPanel" class="login-panel">
-      <div class="login-title">請先登入</div>
-      <div class="login-field">
-        <label for="username">帳號</label>
-        <input type="text" id="username" placeholder="輸入帳號" />
+      <div class="login-title">登入區（登入後才能發送 / 編輯 / 刪除）</div>
+      <div class="login-row">
+        <div class="login-field">
+          <label for="username">帳號</label>
+          <input type="text" id="username" placeholder="輸入帳號" />
+        </div>
+        <div class="login-field">
+          <label for="password">密碼</label>
+          <input type="password" id="password" placeholder="輸入密碼" />
+        </div>
+        <button id="loginBtn" class="btn-login">登入</button>
+        <button id="logoutBtn" class="btn-logout">登出</button>
       </div>
-      <div class="login-field">
-        <label for="password">密碼</label>
-        <input type="password" id="password" placeholder="輸入密碼" />
-      </div>
-      <button id="loginBtn" class="btn-login">登入</button>
       <div class="login-hint">
+        可登入帳號示例：pf1087 / 273324、pf1048 / 821615、pf1259 / pf1259<br>
         （如有帳號問題請洽美美）
       </div>
     </div>
 
-    <!-- 聊天室畫面 -->
+    <!-- 聊天室畫面（永遠顯示；未登入為唯讀） -->
     <div id="chatWrapper" class="chat-wrapper">
       <div class="chat-header">
         <div class="chat-title">同意書契約書（Firestore 即時同步）</div>
-        <button id="logoutBtn" class="btn-logout">登出</button>
+        <div id="currentUserInfo" class="chat-user"></div>
       </div>
-      <div id="currentUserInfo" class="chat-user"></div>
 
       <div id="chatMessages" class="chat-messages"></div>
 
@@ -259,6 +275,9 @@
           在這裡輸入內容...
         </div>
         <button id="sendBtn" class="btn-send">發送</button>
+      </div>
+      <div class="readonly-hint" id="readonlyHint">
+        ※ 未登入時僅能瀏覽，不能發送 / 編輯 / 刪除
       </div>
     </div>
   </div>
@@ -285,9 +304,10 @@
     // -------- DOM 變數 --------
     var loginPanel = document.getElementById('loginPanel');
     var loginBtn = document.getElementById('loginBtn');
-    var chatWrapper = document.getElementById('chatWrapper');
     var logoutBtn = document.getElementById('logoutBtn');
+    var chatWrapper = document.getElementById('chatWrapper');
     var currentUserInfo = document.getElementById('currentUserInfo');
+    var readonlyHint = document.getElementById('readonlyHint');
     var usernameInput = document.getElementById('username');
     var passwordInput = document.getElementById('password');
 
@@ -295,7 +315,7 @@
     var sendBtn = document.getElementById('sendBtn');
     var chatMessages = document.getElementById('chatMessages');
 
-    // 假登入帳號清單
+    // 假登入帳號清單（跟之前一樣）
     var validUsers = [
       { username: 'pf1087',  password: '273324'  },
       { username: 'pf1048',  password: '821615'  },
@@ -325,28 +345,38 @@
       });
     }
 
-    // 套用登入後 UI
+    // 更新登入顯示 & 提示文字
+    function updateLoginUI() {
+      if (currentUser) {
+        currentUserInfo.textContent = '已登入帳號：' + currentUser;
+        readonlyHint.textContent = '已登入，可發送 / 編輯 / 刪除';
+      } else {
+        currentUserInfo.textContent = '目前為訪客模式（僅瀏覽）';
+        readonlyHint.textContent = '※ 未登入時僅能瀏覽，不能發送 / 編輯 / 刪除';
+      }
+    }
+
+    // 套用登入後狀態
     function applyLoggedIn(user) {
       currentUser = user;
-      loginPanel.style.display = 'none';
-      chatWrapper.style.display = 'flex';
-      currentUserInfo.textContent = '已登入帳號：' + currentUser;
+      updateLoginUI();
     }
 
     // 登出
     function logout() {
       currentUser = null;
       localStorage.removeItem(LOCAL_KEY);
-      chatWrapper.style.display = 'none';
-      loginPanel.style.display = 'block';
       usernameInput.value = '';
       passwordInput.value = '';
+      updateLoginUI();
     }
 
     // 一進頁面先檢查 localStorage，有就自動登入
     var savedUser = localStorage.getItem(LOCAL_KEY);
     if (savedUser) {
       applyLoggedIn(savedUser);
+    } else {
+      updateLoginUI();
     }
 
     // 登入
@@ -361,15 +391,23 @@
       if (found) {
         localStorage.setItem(LOCAL_KEY, found.username);
         applyLoggedIn(found.username);
+        alert('登入成功：' + found.username);
       } else {
         alert('帳號或密碼錯誤，請再試一次');
       }
     });
 
     // 登出按鈕
-    logoutBtn.addEventListener('click', logout);
+    logoutBtn.addEventListener('click', function() {
+      if (!currentUser) {
+        alert('目前已是訪客模式');
+        return;
+      }
+      logout();
+      alert('已登出，現在為訪客模式（僅瀏覽）');
+    });
 
-    // 發送訊息（寫進 Firestore）
+    // 發送訊息（寫進 Firestore）—— 未登入不允許
     sendBtn.addEventListener('click', function () {
       var text = editor.innerText.trim();
       if (!text) {
@@ -377,7 +415,7 @@
         return;
       }
       if (!currentUser) {
-        alert('請先登入後再發送訊息');
+        alert('請先登入後才可發送訊息');
         return;
       }
 
@@ -401,7 +439,7 @@
       }
     });
 
-    // 即時監聽 Firestore
+    // 即時監聽 Firestore（訪客也能看到）
     messagesCol.orderBy('createdAt', 'asc').onSnapshot(function (snapshot) {
       chatMessages.innerHTML = '';
 
@@ -443,8 +481,12 @@
         message.appendChild(deleteBtn);
         message.appendChild(textWrapper);
 
-        // 雙擊啟用編輯模式
+        // 雙擊啟用編輯模式 —— 未登入禁止
         messageText.addEventListener('dblclick', function () {
+          if (!currentUser) {
+            alert('請先登入後才可編輯內容');
+            return;
+          }
           var rawText = messageText.innerText;
           messageText.contentEditable = 'true';
           messageText.classList.add('editing');
@@ -452,24 +494,35 @@
           messageText.focus();
         });
 
-        // 失焦時儲存修改
+        // 失焦時儲存修改 —— 未登入禁止（理論上雙擊就擋掉了，再多一層保險）
         messageText.addEventListener('blur', function () {
-          if (messageText.isContentEditable) {
-            var newText = messageText.innerText.trim();
+          if (!messageText.isContentEditable) return;
+
+          if (!currentUser) {
             messageText.contentEditable = 'false';
             messageText.classList.remove('editing');
-
-            messagesCol.doc(id).update({
-              text: newText
-            }).catch(function (e) {
-              console.error('更新訊息失敗：', e);
-              alert('更新訊息失敗：' + e.message);
-            });
+            alert('請先登入後才可編輯內容');
+            return;
           }
+
+          var newText = messageText.innerText.trim();
+          messageText.contentEditable = 'false';
+          messageText.classList.remove('editing');
+
+          messagesCol.doc(id).update({
+            text: newText
+          }).catch(function (e) {
+            console.error('更新訊息失敗：', e);
+            alert('更新訊息失敗：' + e.message);
+          });
         });
 
-        // 刪除訊息
+        // 刪除訊息 —— 未登入禁止
         deleteBtn.addEventListener('click', function () {
+          if (!currentUser) {
+            alert('請先登入後才可刪除訊息');
+            return;
+          }
           messagesCol.doc(id).delete().catch(function (e) {
             console.error('刪除訊息失敗：', e);
             alert('刪除訊息失敗：' + e.message);
